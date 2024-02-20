@@ -1,0 +1,299 @@
+---
+title: "HW4"
+author: "Leonardo Robles-Lara"
+date: "2024-02-14"
+output: 
+  html_document:
+    theme: darkly
+    
+---
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  message = FALSE,  
+  warning = FALSE
+  )
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(mosaic)
+gas_prices <- read.csv("/Users/leo.rl/Downloads/gasprices.csv")
+sclass_data <- read.csv("/Users/leo.rl/Downloads/sclass.csv")
+pilot_data <- read.csv("/Users/leo.rl/Downloads/nbc_pilotsurvey.csv")
+ebay_data <- read.csv("/Users/leo.rl/Downloads/ebay.csv")
+```
+
+```{r}
+#[**Link to Github**](Will put github link here)
+```
+
+# **Question 1**
+
+## **Part A**
+### Claim: Are gas prices impacted based on if there are competitors nearby?
+
+
+```{r}
+boot_comp <- do(10000) * diffmean(Price ~ Competitors, data = mosaic::resample(gas_prices))
+diff_comp <- boot_comp$diffmean
+
+ggplot(data = boot_comp, aes(x = diffmean)) +
+  geom_histogram(color = "black") +
+  labs(title ="Distinguisable Difference is Price Based on Competition",
+         x = "Difference Distribution Based on Mean",
+         y = "Count")
+```
+
+### Evidence
+As can be deduced by the use of bootstrapping the sample 10,000 times, the difference in price between gas stations with competitors and gas stations without competitors is negligible. I am 95% confident that this is correct via the use of the proper confidence intervals which contains represent the difference of gas prices from one side of the spectrum to the other. These values are `r round(quantile(diff_comp, probs = 0.025), 3)` cents which represents the lower end of the spectrum and `r round(quantile(diff_comp, probs = 0.975),3)` cents which represents the upper bound of what allows me to say I am 95% confident. 
+
+### Conclusion
+The value zero being within the distribution in the histogram leads me to the conclusion that the data does not represent a difference in gas prices for gas stations with and without direct competitors. In conclusion, based on the bootstrapped sample, it can be said that gas prices do not change based on whether or not they have competitors.
+
+## **Part B**
+### Claim: Does the wealth of the surrounding area correlate to higher prices?
+
+
+```{r}
+boot_income <- do(10000) * lm(Price ~ Income, data = mosaic::resample(gas_prices))
+confint(boot_income, level = 0.95)
+
+ggplot(data = gas_prices, aes(x = Income, y = Price)) +
+  geom_jitter(alpha = 0.25) +  
+  geom_smooth(method = "lm") +
+  labs(title = "Correlation of Average Area Income Compared to Gas Prices",
+       x = "Correlation",
+       y = "Price of Gas")
+
+
+```
+
+### Evidence
+Once again we have bootstrapped the sample 10,000 times and have come to a similar result. The income of the area does correlate with gas price increase. There is a minimal increase based on the the income row that is listed above. With the lower and upper being out of the range of zero it is predicted that with 95% confidence there is a significant relationship statistically.
+
+### Conclusion
+In conclusion, based off of the bootstrapped samples, the income average of an area does influence the price of gas from the selected gas stations. Though even at the lowest possible level to the average person, it is still significant to statisticans like ourselves.
+
+
+## **Part C**
+### Claim: Do gas stations charge more at stoplights?
+
+```{r}
+boot_stoplight <- do(10000)*diffmean(Price ~ Stoplight, data=mosaic::resample(gas_prices))
+diff_stoplight <- boot_stoplight$diffmean
+
+ggplot(data = boot_stoplight, aes(x = diffmean)) +
+  geom_histogram(color = "black") +
+  labs(title = "Differences of Gas Prices When Correlated with Stoplights",
+       x = "Difference Distribution Based on Mean",
+       y = "Count")
+```
+
+### Evidence
+With the use of bootstrapping the sample 10,000 times, the difference in price between gas stations near stoplights and gas stations not close to stoplights also is negligible. I can again say this with 95% confidence because of the histogram above. These values within the histogram are within`r round(quantile(diff_stoplight, probs = 0.025), 3)` cents which represents the lower end of the spectrum and `r round(quantile(diff_stoplight, probs = 0.975),3)` cents which represents the upper bound. 
+
+### Conclusion
+The value zero being within the distribution in the histogram allows us to make the statistical conclusion. To conclude, based on the bootstrapped sample, it is highly unlikely that the distance t stoplights affects the pricing of gas.
+
+## **Part D**
+### Claim: Do gas stations with direct highway access charge more than gas station without highway access?
+
+```{r}
+boot_highway <- do(10000)*diffmean(Price ~ Highway, data=mosaic::resample(gas_prices))
+diff_highway <- boot_highway$diffmean
+
+ggplot(data = boot_highway, aes(x = diffmean)) +
+  geom_histogram(color = "black") +
+  labs(title = "Difference in Gas Station Pricing when close to Highway",
+       x = "Difference Distribution Based on Mean",
+       y = "Count")
+```
+
+### Evidence
+The best approach to identify whether we can determine a negligible difference will again be through bootstrapping. According to the 95% confidence interval we implemented it can be determined that there is a difference even if minimal. With 95% confidence I can say that the values will fall within the values `r round(quantile(diff_highway, probs = 0.025), 3)` cents and `r round(quantile(diff_highway, probs = 0.975),3)` cents. 
+
+### Conclusion
+This does not contain the value 0 which allows us to conclude there is a difference in gas stations close to the highway when compared to gas stations not within direct flow with the highways. While it is quite minimal, we can conclude that there is a difference.
+
+
+## **Part E**
+### Claim: Does Shell charges more than all other non-Shell brands?
+
+```{r}
+gas_prices_modified <- mutate(gas_prices, is_shell = ifelse(Brand == "Shell", "Yes", "No"))
+boot_shell <- do(10000)*diffmean(Price ~ is_shell, data=mosaic::resample(gas_prices_modified))
+diff_shell <- boot_shell$diffmean
+
+ggplot(data = boot_shell, aes(x = diffmean)) +
+  geom_histogram(color = "black") +
+  labs(title = "Difference in Shell Pricing Compared to other Brands",
+       x = "Difference Distribution Based on Mean",
+       y = "Count")
+```
+
+### Evidence
+To figure out whether Shell charges more than the other brands we first had to create a new variable for whether it was shell or not. This new data set that was created is what we will use in order to determine the difference. When bootstrapping the sample 10,000 times we were able to determine that the difference is not significant again because of the inclusion of zero in the confidence interval. The 95% confidence interval places a majority of the values within `r round(quantile(diff_shell, probs = 0.025), 3)` cents and `r round(quantile(diff_shell, probs = 0.975),3)` cents. 
+
+
+### Conclusion
+This allows us to see that 0 is included and as stated earlier is the reason why we can conclude that it is not a statistically important difference. That means that based on the bootstrapping done to the sample, I can say with 95% confidence that Shell does not charge more than other brands.
+
+
+# **Question 2**
+
+## **Part A**
+
+```{r}
+filtered_sc_data <- filter(sclass_data, year == '2011' & trim == '63 AMG')
+
+boot_sc <- do(10000)*mean(~mileage, data=mosaic::resample(filtered_sc_data))
+mean_mileage <- boot_sc$mean
+
+ggplot(data = boot_sc, aes(x = mean)) +
+  geom_histogram(color = "black") +
+  labs(title = "Average Mileage For 2011 S-Class 63 AMG",
+       x = "Mileage",
+       y = "Count")
+
+```
+
+With the use of the 95% confidence interval the average mileage of all 116 2011 S-Class cars with a 63 AMG trim that will be on the market lies between `r round(quantile(boot_sc$mean, probs = 0.025), 2)` miles and `r round(quantile(boot_sc$mean, probs = 0.975), 2)` miles.
+
+
+## Part B
+
+```{r}
+filtered_sc_data2 <- filter(sclass_data, year == '2014' & trim == '550')
+black_sc_data <- mutate(filtered_sc_data2, is_black = ifelse(color == "Black", "Yes", "No"))
+
+boot_black_car <- do(10000)*prop(~is_black, data=mosaic::resample(black_sc_data))
+prop_black_car <- boot_black_car$prop_No
+
+ggplot(data = boot_black_car, aes(x = prop_No)) +
+  geom_histogram(color = "black") +
+  labs(title = "Percentage of All 2014 S-Class 550s Painted Black",
+       x = "Proportion",
+       y = "Count")
+
+```
+
+I can say with 95% confidence that the proportion of 2014 S-Class 550s that were painted black is within the bounds of `r round(quantile(prop_black_car, probs = 0.025),3)`% and `r round(quantile(prop_black_car, probs = 0.975),3)`%. This is a proportion predicting all of these cars ever produced based on the bootstrapping of the sample.
+
+
+# Question 3
+
+## **Part A**
+
+```{r}
+ed_earl_data <- filter(pilot_data, Show == "Living with Ed" | Show == "My Name is Earl")
+
+boot_show <- do(10000)*diffmean(Q1_Happy ~ Show, data=mosaic::resample(ed_earl_data))
+diff_show <- boot_show$diffmean
+
+ggplot(data = boot_show, aes(x = diffmean)) +
+  geom_histogram(color = "black") +
+  labs(title = "Difference in Happiness Levels Between Shows",
+       x = "Difference Distribution Based on Mean",
+       y = "Count")
+
+```
+
+### Question
+Is there evidence that one show consistently produces a higher average Q1_Happy response among viewers when comparing both shows?
+
+### Approach
+The approach I used was that of bootstrapping the sample 10000 times in order to get an idea through the difference in means for the two different shows in relaton by happiness scores.
+
+### Results
+The histogram above gives us a lot of information neccesary to understanding what the bootstrapping has allowed us to discover. If we look at the average between the differences of the two diffeent shows we can see that it is around `r round(mean(boot_show$diffmean),3)`.
+
+### Conclusion
+Due to the fact that 0 is within the interval it is with 95% confidence that I can conclude that there is no statistical significance to the difference between the happiness levels from both of the shows pilot episodes.
+
+
+## **Part B**
+
+```{r}
+lose_angel_data <- filter(pilot_data, Show == "The Biggest Loser" | Show == "The Apprentice: Los Angeles")
+
+boot_show2 <- do(10000) * diffmean(Q1_Annoyed ~ Show, data=mosaic::resample(lose_angel_data))
+diff_show2 <- boot_show2$diffmean
+
+confint(boot_show2$diffmean, level = 0.95) 
+
+ggplot(data = boot_show2, aes(x = diffmean)) +
+  geom_histogram(color = "black") +
+  labs(title = "Difference in Annoyance Levels Between Shows",
+       x = "Difference Distribution Based on Mean",
+       y = "Count")
+
+```
+
+### Question
+Is there evidence that one show consistently produces a higher average Q1_Annoyed response among viewers when comparing each of the shows?
+
+### Approach
+The approach was once again bootstrapping the sample 10000 times and using the function confint to see what the upper and lower bounds were for the distribution.
+
+### Results
+The histogram above gives us a lot of information neccesary to understanding what the bootstrapping has allowed us to discover. The main thing to look at however is the confint function which contains the upper and lower bounds. This range does not conatin zero and maintains its value as a negative number.
+
+### Conclusion
+Due to the fact that 0 is not within the interval it is with 95% confidence that I can conclude that there is statistical significance to the difference between the levels of annoyance either show caused.
+
+## **Part C**
+
+```{r}
+stars_data <- filter(pilot_data, Show == "Dancing with the Stars")
+stars_data <- mutate(stars_data, confusing_rating = ifelse(Q2_Confusing < 4, "Yes", "No"))
+
+boot_dance <- do(10000)*prop(~confusing_rating, data = mosaic::resample(stars_data))
+
+ggplot(data = boot_dance, aes(x = prop_No)) +
+  geom_histogram(color = "black") +
+  labs(title = "Proportion of People Who Were Confused",
+       x = "Proportion",
+       y = "Count")
+```
+
+### Question
+What proportion of American TV watchers would we expect to be gretly confused while watching Dancig with the stars.
+
+### Approach
+I used the bootstrapping method to resample the proportion of the bootstrapped sample that would answer with a 4 or more. This histogram directly compares the proportion of people who found it confusing (4 or 5) to people who did not or were indifferent (1 to 3).
+
+### Results
+The histogram reveals plenty of information for us to dissect. From the a verage, we can see that consumers of the show were consumed on average `r round(mean(boot_dance$prop),3)`. This will gove us an indicator of where the confidence interval will lie.
+
+### Conclusion
+It can be assumed with 95% confidence that the number of people who find the show confusing is between `r round(quantile(boot_dance$prop, probs = 0.025),3)` and `r round(quantile(boot_dance$prop, probs = 0.975),3)`.
+
+# Question 4
+
+```{r}
+boot_ebay <- do(10000)*diffmean(rev_ratio ~ adwords_pause, data = mosaic::resample(ebay_data))
+
+ggplot(data = boot_ebay, aes(x = diffmean)) +
+  geom_histogram(color = "black", bins = 40) +
+  labs(title = "Difference in Revenue Ratio",
+       x = "Difference Distribution Based on Mean",
+       y = "Count")
+
+confint(boot_ebay, level = 0.95) 
+```
+
+### Question
+Does the revenue ratio have a significant difference in treatment and control groups?
+
+### Approach
+Bootstrapping is again a key factor in determining the solution to this question. Using the sample 10000 times we are able to create a normalized graph and start taking information from there.
+
+### Results
+The histogram gives us an overview of the distribution. This then allows us to take our confidence interval of the system which puts our range between `r round(quantile(boot_ebay$diffmean, probs = 0.025),3)` and `r round(quantile(boot_ebay$diffmean, probs = 0.975),3)`.
+
+### Conclusion
+Because 0 is not in the confidence interval, there is a statistically significant difference between the revenue ratio. Therefore, it can be said with 95% confidence that there is a difference in revenue when comparing treatment and control groups.
+
+
+
